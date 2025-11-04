@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Campanha de Comunicação</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <!-- Ícones via CDN (Lucide Icons) -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .drag-over {
+            @apply bg-blue-50 border-blue-400;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .tab-button {
+            @apply px-4 py-3 font-semibold transition text-lg;
+        }
+        .tab-button.active {
+            @apply border-b-4 border-blue-600 text-blue-800;
+        }
+        .tab-button.inactive {
+            @apply text-gray-600 hover:text-gray-800 hover:border-b-4 hover:border-gray-300;
+        }
+        .panel {
+            @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+<header class="bg-[#4D61FF] shadow-md text-white">
+    <div class="max-w-7xl mx-auto px-4 pt-6 pb-4">
+        <h1 class="text-3xl font-bold flex items-center">
+            <i data-lucide="mail-check" class="w-8 h-8 mr-3 text-white"></i>
+            Simulador de Campanha de Comunicação
+        </h1>
+        <p class="text-blue-100 mt-1 mb-4">Ferramenta offline para simulação de métricas de envio de mensagens.</p>
+        
+        <div class="bg-yellow-50 text-yellow-800 px-4 py-2 rounded-lg text-sm mb-4 border border-yellow-200">
+            <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-2"></i>
+            <strong>Aviso:</strong> Todos os dados são fictícios, processados offline no seu navegador.
+        </div>
+
+        <!-- Main Tabs Navigation -->
+        <div class="flex space-x-3 mt-4">
+            <button id="tabSimulacaoBtn" class="tab-button active bg-white text-[#4D61FF] rounded-xl px-5 py-2 font-semibold shadow-md hover:bg-blue-50 transition" data-tab="simulacao">
+                <i data-lucide="send" class="w-5 h-5 inline mr-2"></i>
+                Simulação
+            </button>
+            <button id="tabResultadosBtn" class="tab-button inactive bg-white/20 text-white border border-white/30 rounded-xl px-5 py-2 font-semibold hover:bg-white/30 transition" data-tab="resultados">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 inline mr-2"></i>
+                Resultados e Gráficos
+            </button>
+        </div>
+    </div>
+</header>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 max-w-7xl mx-auto w-full p-4">
+            
+            <!-- Tab Content: Simulação -->
+            <div id="simulacaoTab" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Coluna 1: Upload & Filters -->
+                    <div class="space-y-6">
+                        
+                        <!-- Upload Section -->
+                        <div class="panel">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <i data-lucide="file-text" class="w-5 h-5 mr-2 text-blue-600"></i>
+                                1. Upload de Base
+                            </h2>
+                            
+                            <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition">
+                                <input type="file" id="csvFile" accept=".csv" class="hidden">
+                                <div class="text-gray-600">
+                                    <p class="font-semibold">Arraste um arquivo CSV aqui</p>
+                                    <p class="text-sm text-gray-500 mt-2">ou clique para selecionar</p>
+                                </div>
+                            </div>
+                            
+                            <div id="fileInfo" class="mt-4 hidden">
+                                <p class="text-sm text-green-600 font-semibold">✓ Arquivo carregado</p>
+                                <p id="rowCount" class="text-sm text-gray-600 mt-1"></p>
+                            </div>
+                        </div>
+
+                        <!-- Filters Section -->
+                        <div class="panel">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <i data-lucide="filter" class="w-5 h-5 mr-2 text-blue-600"></i>
+                                2. Filtros
+                            </h2>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Faixa Etária</label>
+                                    <select id="filterAge" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Todas</option>
+                                        <option value="18-25">18-25 anos</option>
+                                        <option value="26-35">26-35 anos</option>
+                                        <option value="36-50">36-50 anos</option>
+                                        <option value="51-65">51-65 anos</option>
+                                        <option value="65+">Acima de 65 anos</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">UF</label>
+                                    <select id="filterUF" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Todas</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Produto</label>
+                                    <select id="filterProduct" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Todos</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Canal de Aquisição</label>
+                                    <select id="filterChannel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Todos</option>
+                                    </select>
+                                </div>
+
+                                <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Tempo de inativação (dias)</label>
+        <select id="filterInativacao" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Todas</option>
+            <option value="0-30">0–30 dias</option>
+            <option value="31-60">31–60 dias</option>
+            <option value="61-90">61–90 dias</option>
+            <option value="91-180">91–180 dias</option>
+            <option value="181+">181+ dias</option>
+        </select>
+    </div>
+
+    <button id="resetFilters" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition">
+                                    Limpar Filtros
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Simulation Controls -->
+                        <div class="panel">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <i data-lucide="zap" class="w-5 h-5 mr-2 text-green-600"></i>
+                                3. Iniciar Simulação
+                            </h2>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Seed (opcional)</label>
+                                    <input type="number" id="seedInput" placeholder="Deixe vazio para aleatório" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+
+                                <button id="simulateBtn" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-4 rounded-lg transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                                    🚀 Simular Envio
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna 2: Preview & Message Templates -->
+                    <div class="space-y-6">
+                        
+                        <!-- Message Templates Section -->
+                        <div class="panel">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <i data-lucide="message-square" class="w-5 h-5 mr-2 text-blue-600"></i>
+                                Modelos de Mensagem
+                            </h2>
+                            
+                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                <button class="ageModelBtn text-left px-3 py-2 rounded-lg font-semibold text-sm bg-blue-100 text-blue-800 hover:bg-blue-200 transition" data-age="18-25">18-25 anos</button>
+                                <button class="ageModelBtn text-left px-3 py-2 rounded-lg font-semibold text-sm bg-green-100 text-green-800 hover:bg-green-200 transition" data-age="26-35">26-35 anos</button>
+                                <button class="ageModelBtn text-left px-3 py-2 rounded-lg font-semibold text-sm bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition" data-age="36-50">36-50 anos</button>
+                                <button class="ageModelBtn text-left px-3 py-2 rounded-lg font-semibold text-sm bg-purple-100 text-purple-800 hover:bg-purple-200 transition" data-age="51-65">51-65 anos</button>
+                                <button class="ageModelBtn text-left px-3 py-2 rounded-lg font-semibold text-sm bg-red-100 text-red-800 hover:bg-red-200 transition" data-age="65+">Acima de 65 anos</button>
+                            </div>
+
+                            <div id="messageTemplateSection" class="mt-6 hidden border-t pt-4">
+                                <h3 id="selectedAgeGroup" class="text-lg font-bold text-gray-800 mb-3"></h3>
+                                <textarea id="messageTemplate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-32 font-mono text-sm"></textarea>
+                                <p class="text-xs text-gray-500 mt-2">Placeholders: {Nome}, {UF}, {Limite}, {Tipo de produto}, {Telefone}, {Data de emissão do cartão}</p>
+                            </div>
+                        </div>
+
+                        <!-- Message Preview Section -->
+                        <div class="panel">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <i data-lucide="eye" class="w-5 h-5 mr-2 text-blue-600"></i>
+                                Amostra de Mensagens
+                            </h2>
+                            <div id="messagePreview" class="space-y-3 max-h-64 overflow-y-auto">
+                                <p class="text-gray-500 text-sm">Selecione uma faixa etária para ver amostras</p>
+                            </div>
+                        </div>
+
+                        <!-- Data Preview Section -->
+                        <div class="panel">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <i data-lucide="table" class="w-5 h-5 mr-2 text-blue-600"></i>
+                                Pré-visualização dos Dados (10 linhas)
+                            </h2>
+                            <div id="dataPreview" class="overflow-x-auto max-h-64 overflow-y-auto">
+                                <p class="text-gray-500 text-sm">Carregue um arquivo CSV para visualizar</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna 3: Animated Simulation -->
+                    <div class="space-y-6">
+                        
+                        <!-- Simulation Status -->
+                        <div class="panel">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <i data-lucide="activity" class="w-5 h-5 mr-2 text-green-600"></i>
+                                Status da Simulação
+                            </h2>
+                            
+                            <div id="simulationStatus" class="space-y-3 max-h-96 overflow-y-auto p-2 border rounded-lg bg-gray-50">
+                                <p class="text-gray-500 text-sm">Clique em "Simular Envio" para iniciar.</p>
+                            </div>
+
+                            <div id="simulationSummary" class="mt-4 hidden p-3 rounded-lg bg-blue-50 border border-blue-200">
+                                <h3 class="font-bold text-blue-800 mb-2">Resumo Rápido</h3>
+                                <p id="summaryRates" class="text-sm text-blue-700 mb-3"></p>
+                                <button id="viewResultsBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                                    <i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-2"></i>
+                                    Ver Resultados e Gráficos
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Export Section -->
+                        <div class="panel">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <i data-lucide="download" class="w-5 h-5 mr-2 text-blue-600"></i>
+                                Exportar
+                            </h2>
+                            
+                            <div class="space-y-2">
+                                <button id="exportCSV" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    📊 Exportar Relatório CSV
+                                </button>
+                                <button id="exportChart" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    🖼️ Exportar Gráfico (Barra)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Resultados e Gráficos -->
+            <div id="resultadosTab" class="tab-content hidden">
+                <div class="space-y-6">
+                    
+                    <!-- KPIs Section -->
+                    <div class="panel">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="trending-up" class="w-5 h-5 mr-2 text-blue-600"></i>
+                            KPIs Agregados
+                        </h2>
+                        
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
+                                <p class="text-xs text-gray-600 font-semibold">TOTAL ENVIADAS</p>
+                                <p id="kpiTotal" class="text-2xl font-bold text-blue-600 mt-1">0</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
+                                <p class="text-xs text-gray-600 font-semibold">ENTREGUES</p>
+                                <p id="kpiDelivered" class="text-2xl font-bold text-green-600 mt-1">0</p>
+                                <p id="kpiDeliveryRate" class="text-xs text-gray-600 mt-1">0% (sobre total)</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
+                                <p class="text-xs text-gray-600 font-semibold">ABERTAS</p>
+                                <p id="kpiOpened" class="text-2xl font-bold text-purple-600 mt-1">0</p>
+                                <p id="kpiOpenRate" class="text-xs text-gray-600 mt-1">0% (sobre entregues)</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border-l-4 border-orange-500">
+                                <p class="text-xs text-gray-600 font-semibold">CONVERTIDAS</p>
+                                <p id="kpiConverted" class="text-2xl font-bold text-orange-600 mt-1">0</p>
+                                <p id="kpiConversionRate" class="text-xs text-gray-600 mt-1">0% (sobre abertas)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Section -->
+                    <div class="panel">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="pie-chart" class="w-5 h-5 mr-2 text-blue-600"></i>
+                            Gráficos de Desempenho
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-700 mb-2">Resultados por Faixa Etária (Entregues / Abertas / Convertidas)</h3>
+                                <div class="chart-container">
+                                    <canvas id="ageChart"></canvas>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-700 mb-2">Taxa de Abertura por Faixa Etária (%)</h3>
+                                <div class="chart-container">
+                                    <canvas id="openRateChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h3 class="text-sm font-semibold text-gray-700 mb-2">Top 10 UFs por Entregas e Conversões</h3>
+                            <div class="chart-container">
+                                <canvas id="ufChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Table -->
+                    <div class="panel">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="list-ordered" class="w-5 h-5 mr-2 text-blue-600"></i>
+                            Tabela de Resultados por UF
+                        </h2>
+                        <div id="resultsTable" class="overflow-x-auto max-h-96 overflow-y-auto">
+                            <p class="text-gray-500 text-sm">Simule para ver resultados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Inicializa os ícones Lucide
+        lucide.createIcons();
+
+        // ============================================
+        // CONFIGURAÇÕES E ESTADO GLOBAL
+        // ============================================
+        const state = {
+            csvData: [],
+            filteredData: [],
+            simulationResults: null,
+            charts: {},
+            messageTemplates: {
+                '18-25': 'Olá {Nome}, temos uma oferta especial no seu cartão {Tipo de produto}! Ative até {Data de emissão do cartão} e ganhe 10% de desconto na primeira compra. Clique aqui.',
+                '26-35': 'Olá {Nome}, seu cartão {Tipo de produto} está pronto para uso. Com limite de R$ {Limite}, aproveite condições exclusivas. Ative agora.',
+                '36-50': 'Prezado(a) {Nome}, desbloqueie benefícios do seu cartão {Tipo de produto}. Ativando o cartão você terá proteção estendida e ofertas de parceiros.',
+                '51-65': 'Olá {Nome}, seu cartão {Tipo de produto} está aguardando ativação. Ative para acessar atendimento prioritário e descontos selecionados.',
+                '65+': 'Olá {Nome}, o seu novo cartão está pronto. Se precisar, ligue para {Telefone} para receber ajuda na ativação.'
+            },
+            openRateByAge: {
+                '18-25': 0.45,
+                '26-35': 0.50,
+                '36-50': 0.55,
+                '51-65': 0.48,
+                '65+': 0.38
+            },
+            conversionRateByAge: {
+                '18-25': 0.05,
+                '26-35': 0.05,
+                '36-50': 0.08,
+                '51-65': 0.03,
+                '65+': 0.03
+            }
+        };
+
+        // ============================================
+        // GERENCIAMENTO DE ABAS PRINCIPAIS
+        // ============================================
+        
+        const mainTabButtons = document.querySelectorAll('.tab-button');
+        const mainTabContents = document.querySelectorAll('.tab-content');
+        const viewResultsBtn = document.getElementById('viewResultsBtn');
+
+        function switchTab(tabName) {
+            mainTabButtons.forEach(btn => {
+                if (btn.dataset.tab === tabName) {
+                    btn.classList.add('active');
+                    btn.classList.remove('inactive');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.add('inactive');
+                }
+            });
+            
+            mainTabContents.forEach(content => {
+                if (content.id === tabName + 'Tab') {
+                    content.classList.remove('hidden');
+                    // Força o redimensionamento dos gráficos ao mostrar a aba de resultados
+                    if (tabName === 'resultados') {
+                        setTimeout(() => {
+                            Object.values(state.charts).forEach(chart => {
+                                if (chart && chart.resize) chart.resize();
+                            });
+                        }, 100);
+                    }
+                } else {
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        mainTabButtons.forEach(button => {
+            button.addEventListener('click', () => switchTab(button.dataset.tab));
+        });
+
+        viewResultsBtn.addEventListener('click', () => switchTab('resultados'));
+
+        // ============================================
+        // FUNÇÕES UTILITÁRIAS
+        // ============================================
+        
+        function normalizeString(str) {
+            return str
+                .toLowerCase()
+                .trim()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, '');
+        }
+
+        function detectSeparator(firstLine) {
+            const commaCount = (firstLine.match(/,/g) || []).length;
+            const semicolonCount = (firstLine.match(/;/g) || []).length;
+            return semicolonCount > commaCount ? ';' : ',';
+        }
+
+        function mapColumn(headers, targetNames) {
+            for (let target of targetNames) {
+                const normalized = normalizeString(target);
+                const found = headers.find(h => normalizeString(h) === normalized);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function getAgeGroup(age) {
+            if (!age) return null;
+            age = parseInt(age);
+            if (age >= 18 && age <= 25) return '18-25';
+            if (age >= 26 && age <= 35) return '26-35';
+            if (age >= 36 && age <= 50) return '36-50';
+            if (age >= 51 && age <= 65) return '51-65';
+            if (age > 65) return '65+';
+            return null;
+        }
+
+        function seededRandom(seed) {
+            const x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        // ============================================
+        // UPLOAD E PARSING DE CSV
+        // ============================================
+        
+        const dropZone = document.getElementById('dropZone');
+        const csvFile = document.getElementById('csvFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const rowCount = document.getElementById('rowCount');
+
+        dropZone.addEventListener('click', () => csvFile.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                csvFile.files = files;
+                handleFileUpload();
+            }
+        });
+
+        csvFile.addEventListener('change', handleFileUpload);
+
+        function handleFileUpload() {
+            const file = csvFile.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const csv = e.target.result;
+                    const lines = csv.split('\n').filter(line => line.trim());
+                    if (lines.length < 2) {
+                        alert('Arquivo CSV inválido. Certifique-se de que contém cabeçalho e dados.');
+                        return;
+                    }
+
+                    const separator = detectSeparator(lines[0]);
+                    
+                    Papa.parse(csv, {
+                        header: true,
+                        delimiter: separator,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            if (results.errors.length > 0) {
+                                alert('Erro ao fazer parsing do CSV: ' + results.errors[0].message);
+                                return;
+                            }
+
+                            const headers = results.meta.fields || [];
+                            const colName = mapColumn(headers, ['Nome', 'name']);
+                            const colEmail = mapColumn(headers, ['E-mail', 'Email', 'email']);
+                            const colPhone = mapColumn(headers, ['Telefone', 'Phone', 'phone']);
+                            const colCardDate = mapColumn(headers, ['Data de emissão do cartão', 'Card date', 'Data de emissão']);
+                            const colStatus = mapColumn(headers, ['Status de ativação', 'Status']);
+                            const colProduct = mapColumn(headers, ['Tipo de produto', 'Product']);
+                            const colLimit = mapColumn(headers, ['Limite concedido (R$)', 'Limit', 'Limite']);
+                            const colUF = mapColumn(headers, ['UF', 'State']);
+                            const colAge = mapColumn(headers, ['Faixa etária', 'Age group', 'Age']);
+                            const colChannel = mapColumn(headers, ['Canal de aquisição', 'Channel']);
+                            const colDebit = mapColumn(headers, ['Débito ativo', 'Active debit']);
+            const colInativacao = mapColumn(headers, ['Tempo de inativação (dias)', 'Tempo de inativação', 'Inativacao']);
+
+                            state.csvData = results.data.map(row => ({
+                                nome: row[colName] || '',
+                                email: row[colEmail] || '',
+                                telefone: row[colPhone] || '',
+                                dataEmissao: row[colCardDate] || '',
+                                status: row[colStatus] || '',
+                                tipoProduto: row[colProduct] || '',
+                                limite: row[colLimit] || '',
+                                uf: row[colUF] || '',
+                                faixaEtaria: getAgeGroup(row[colAge]) || 'Desconhecido',
+                                canalAquisicao: row[colChannel] || '',
+                                debitoAtivo: row[colDebit] || '',
+                tempoInativacao: parseInt(row[colInativacao] || '0')
+                            })).filter(row => row.nome && row.email);
+
+                            fileInfo.classList.remove('hidden');
+                            rowCount.textContent = `${state.csvData.length} clientes carregados`;
+
+                            updateDataPreview();
+                            populateFilterOptions();
+                            enableSimulation();
+                            resetSimulationStatus();
+                        }
+                    });
+                } catch (error) {
+                    alert('Erro ao processar arquivo: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ============================================
+        // PREVIEW DE DADOS
+        // ============================================
+        
+        function updateDataPreview() {
+            const preview = document.getElementById('dataPreview');
+            if (state.csvData.length === 0) {
+                preview.innerHTML = '<p class="text-gray-500 text-sm">Nenhum dado carregado</p>';
+                return;
+            }
+
+            const displayData = state.csvData.slice(0, 10);
+            const headers = ['Nome', 'UF', 'Faixa Etária', 'Produto'];
+            
+            let html = '<table class="w-full text-sm border-collapse">';
+            html += '<thead><tr class="bg-gray-100 border-b">';
+            headers.forEach(h => html += `<th class="px-2 py-2 text-left font-semibold">${h}</th>`);
+            html += '</tr></thead><tbody>';
+            
+            displayData.forEach(row => {
+                html += '<tr class="border-b hover:bg-gray-50">';
+                html += `<td class="px-2 py-2">${row.nome}</td>`;
+                html += `<td class="px-2 py-2">${row.uf}</td>`;
+                html += `<td class="px-2 py-2">${row.faixaEtaria}</td>`;
+                html += `<td class="px-2 py-2">${row.tipoProduto}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            if (state.csvData.length > 10) {
+                html += `<p class="text-xs text-gray-500 mt-2">... e mais ${state.csvData.length - 10} registros</p>`;
+            }
+            
+            preview.innerHTML = html;
+        }
+
+        // ============================================
+        // FILTROS
+        // ============================================
+        
+        function populateFilterOptions() {
+            const ufs = [...new Set(state.csvData.map(r => r.uf).filter(Boolean))].sort();
+            const products = [...new Set(state.csvData.map(r => r.tipoProduto).filter(Boolean))].sort();
+            const channels = [...new Set(state.csvData.map(r => r.canalAquisicao).filter(Boolean))].sort();
+
+            const ufSelect = document.getElementById('filterUF');
+            const productSelect = document.getElementById('filterProduct');
+            const channelSelect = document.getElementById('filterChannel');
+
+            // Limpar e popular UF
+            ufSelect.innerHTML = '<option value="">Todas</option>';
+            ufs.forEach(uf => {
+                const option = document.createElement('option');
+                option.value = uf;
+                option.textContent = uf;
+                ufSelect.appendChild(option);
+            });
+
+            // Limpar e popular Produto
+            productSelect.innerHTML = '<option value="">Todos</option>';
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product;
+                option.textContent = product;
+                productSelect.appendChild(option);
+            });
+
+            // Limpar e popular Canal
+            channelSelect.innerHTML = '<option value="">Todos</option>';
+            channels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel;
+                option.textContent = channel;
+                channelSelect.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            const age = document.getElementById('filterAge').value;
+            const uf = document.getElementById('filterUF').value;
+            const product = document.getElementById('filterProduct').value;
+            const channel = document.getElementById('filterChannel').value;
+        const inat = document.getElementById('filterInativacao').value;
+
+            state.filteredData = state.csvData.filter(row => {
+                if (age && row.faixaEtaria !== age) return false;
+                if (uf && row.uf !== uf) return false;
+                if (product && row.tipoProduto !== product) return false;
+
+        if (inat) {
+            let min = 0, max = 99999;
+            if (inat === "181+") { min = 181; max = 99999; }
+            else {
+                const parts = inat.split("-");
+                min = parseInt(parts[0]);
+                max = parseInt(parts[1]);
+            }
+            if (!(row.tempoInativacao >= min && row.tempoInativacao <= max)) return false;
+        }
+                if (channel && row.canalAquisicao !== channel) return false;
+                return true;
+            });
+
+            updateMessagePreview();
+            if (state.simulationResults) {
+                // Se já houve simulação, recalcula o dashboard com os filtros
+                updateDashboard(state.simulationResults.filter(r => {
+                    if (age && r.faixaEtaria !== age) return false;
+                    if (uf && r.uf !== uf) return false;
+                    if (product && r.tipoProduto !== product) return false;
+                    if (channel && r.canalAquisicao !== channel) return false;
+                    return true;
+                }));
+            }
+        }
+
+        document.getElementById('filterAge').addEventListener('change', applyFilters);
+        document.getElementById('filterUF').addEventListener('change', applyFilters);
+        document.getElementById('filterProduct').addEventListener('change', applyFilters);
+        document.getElementById('filterChannel').addEventListener('change', applyFilters);
+    document.getElementById('filterInativacao').addEventListener('change', applyFilters);
+
+        document.getElementById('resetFilters').addEventListener('click', () => {
+            document.getElementById('filterAge').value = '';
+            document.getElementById('filterUF').value = '';
+            document.getElementById('filterProduct').value = '';
+            document.getElementById('filterChannel').value = '';
+        document.getElementById('filterInativacao').value = '';
+            applyFilters();
+        });
+
+        // ============================================
+        // MODELOS DE MENSAGEM
+        // ============================================
+        
+        const ageModelBtns = document.querySelectorAll('.ageModelBtn');
+        const messageTemplateSection = document.getElementById('messageTemplateSection');
+        const selectedAgeGroup = document.getElementById('selectedAgeGroup');
+        const messageTemplate = document.getElementById('messageTemplate');
+        let selectedAge = null;
+
+        ageModelBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                ageModelBtns.forEach(b => b.classList.remove('ring-2', 'ring-blue-500'));
+                btn.classList.add('ring-2', 'ring-blue-500');
+                selectedAge = btn.dataset.age;
+                selectedAgeGroup.textContent = `Modelo para ${btn.textContent}`;
+                messageTemplate.value = state.messageTemplates[selectedAge];
+                messageTemplateSection.classList.remove('hidden');
+                updateMessagePreview();
+            });
+        });
+
+        messageTemplate.addEventListener('change', () => {
+            if (selectedAge) {
+                state.messageTemplates[selectedAge] = messageTemplate.value;
+            }
+        });
+
+        function updateMessagePreview() {
+            const preview = document.getElementById('messagePreview');
+            if (!selectedAge || state.csvData.length === 0) {
+                preview.innerHTML = '<p class="text-gray-500 text-sm">Nenhum dado para exibir</p>';
+                return;
+            }
+
+            const dataToUse = state.filteredData.length > 0 ? state.filteredData : state.csvData;
+            const ageData = dataToUse.filter(r => r.faixaEtaria === selectedAge).slice(0, 3);
+            
+            if (ageData.length === 0) {
+                preview.innerHTML = '<p class="text-gray-500 text-sm">Nenhum cliente neste segmento</p>';
+                return;
+            }
+
+            let html = '';
+            ageData.forEach(row => {
+                let msg = state.messageTemplates[selectedAge]
+                    .replace('{Nome}', row.nome)
+                    .replace('{UF}', row.uf)
+                    .replace('{Limite}', row.limite)
+                    .replace('{Tipo de produto}', row.tipoProduto)
+                    .replace('{Telefone}', row.telefone)
+                    .replace('{Data de emissão do cartão}', row.dataEmissao);
+                
+                html += `<div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <p class="text-xs font-semibold text-gray-600 mb-1">${row.nome} (${row.faixaEtaria})</p>
+                    <p class="text-sm text-gray-800">${msg}</p>
+                </div>`;
+            });
+
+            preview.innerHTML = html;
+        }
+
+        // ============================================
+        // SIMULAÇÃO E ANIMAÇÃO
+        // ============================================
+        
+        const simulateBtn = document.getElementById('simulateBtn');
+        const simulationStatusDiv = document.getElementById('simulationStatus');
+        const simulationSummaryDiv = document.getElementById('simulationSummary');
+
+        function enableSimulation() {
+            simulateBtn.disabled = false;
+        }
+
+        function resetSimulationStatus() {
+            simulationStatusDiv.innerHTML = '<p class="text-gray-500 text-sm">Clique em "Simular Envio" para iniciar.</p>';
+            simulationSummaryDiv.classList.add('hidden');
+            state.simulationResults = null;
+            updateDashboard([]); // Limpa o dashboard
+        }
+
+        simulateBtn.addEventListener('click', runSimulation);
+
+        async function runSimulation() {
+            if (state.csvData.length === 0) {
+                alert('Carregue um arquivo CSV primeiro');
+                return;
+            }
+
+            simulateBtn.disabled = true;
+            simulationStatusDiv.innerHTML = '';
+            simulationSummaryDiv.classList.add('hidden');
+
+            const dataToSimulate = state.filteredData.length > 0 ? state.filteredData : state.csvData;
+            const seedInput = document.getElementById('seedInput').value;
+            const seed = seedInput ? parseInt(seedInput) : Math.random() * 1000000;
+            const results = [];
+            let totalDelivered = 0;
+            let totalOpened = 0;
+            let totalConverted = 0;
+
+            for (let idx = 0; idx < dataToSimulate.length; idx++) {
+                const row = dataToSimulate[idx];
+                const clientSeed = seed + idx;
+
+                // 1. ENTREGA
+                const deliveryRate = 0.98;
+                const deliveryNoise = (seededRandom(clientSeed) - 0.5) * 0.04;
+                const delivered = seededRandom(clientSeed * 2) < (deliveryRate + deliveryNoise);
+
+                let opened = false;
+                let converted = false;
+                let statusIcon = '<i data-lucide="x" class="w-4 h-4 text-red-500 inline mr-1"></i>';
+                let statusText = 'Falha no Envio';
+
+                if (delivered) {
+                    totalDelivered++;
+                    
+                    // 2. ABERTURA
+                    const baseOpenRate = state.openRateByAge[row.faixaEtaria] || 0.5;
+                    const openNoise = (seededRandom(clientSeed * 3) - 0.5) * 0.1;
+                    opened = seededRandom(clientSeed * 4) < (baseOpenRate + openNoise);
+
+                    if (opened) {
+                        totalOpened++;
+                        
+                        // 3. CONVERSÃO
+                        const baseConvRate = state.conversionRateByAge[row.faixaEtaria] || 0.05;
+                        const convNoise = (seededRandom(clientSeed * 5) - 0.5) * 0.04;
+                        converted = seededRandom(clientSeed * 6) < (baseConvRate + convNoise);
+
+                        if (converted) {
+                            totalConverted++;
+                            statusIcon = '<i data-lucide="credit-card" class="w-4 h-4 text-orange-500 inline mr-1"></i>';
+                            statusText = 'Convertido';
+                        } else {
+                            statusIcon = '<i data-lucide="eye" class="w-4 h-4 text-purple-500 inline mr-1"></i>';
+                            statusText = 'Aberto';
+                        }
+                    } else {
+                        statusIcon = '<i data-lucide="check" class="w-4 h-4 text-green-500 inline mr-1"></i>';
+                        statusText = 'Entregue';
+                    }
+                }
+
+                results.push({
+                    ...row,
+                    entregue: delivered ? 'Sim' : 'Não',
+                    aberto: opened ? 'Sim' : 'Não',
+                    convertido: converted ? 'Sim' : 'Não'
+                });
+
+                // Animação de envio
+                const listItem = document.createElement('div');
+                listItem.className = 'text-sm p-1 border-b border-gray-200 flex justify-between items-center';
+                listItem.innerHTML = `
+                    <span class="text-gray-700">${row.nome} (${row.faixaEtaria})</span>
+                    <span class="font-semibold text-xs flex items-center">${statusIcon} ${statusText}</span>
+                `;
+                simulationStatusDiv.prepend(listItem);
+                simulationStatusDiv.scrollTop = 0; // Mantém o scroll no topo
+
+                // Pequeno delay para animação
+                await new Promise(resolve => setTimeout(resolve, 50)); 
+                lucide.createIcons(); // Renderiza o ícone no novo elemento
+            }
+
+            state.simulationResults = results;
+            updateDashboard(results);
+            simulateBtn.disabled = false;
+
+            // Resumo Final
+            const total = dataToSimulate.length;
+            const deliveryRate = total > 0 ? ((totalDelivered / total) * 100).toFixed(1) : 0;
+            const openRate = totalDelivered > 0 ? ((totalOpened / totalDelivered) * 100).toFixed(1) : 0;
+            const conversionRate = totalOpened > 0 ? ((totalConverted / totalOpened) * 100).toFixed(1) : 0;
+
+            document.getElementById('summaryRates').innerHTML = `
+                Entregues: <strong>${deliveryRate}%</strong> | 
+                Abertas: <strong>${openRate}%</strong> | 
+                Convertidas: <strong>${conversionRate}%</strong>
+            `;
+            simulationSummaryDiv.classList.remove('hidden');
+            alert('✓ Simulação concluída com sucesso!');
+        }
+
+        // ============================================
+        // DASHBOARD
+        // ============================================
+        
+        function updateDashboard(data) {
+            if (!data || data.length === 0) {
+                // Limpar KPIs
+                document.getElementById('kpiTotal').textContent = 0;
+                document.getElementById('kpiDelivered').textContent = 0;
+                document.getElementById('kpiDeliveryRate').textContent = '0% (sobre total)';
+                document.getElementById('kpiOpened').textContent = 0;
+                document.getElementById('kpiOpenRate').textContent = '0% (sobre entregues)';
+                document.getElementById('kpiConverted').textContent = 0;
+                document.getElementById('kpiConversionRate').textContent = '0% (sobre abertas)';
+                
+                // Limpar Gráficos e Tabela
+                Object.values(state.charts).forEach(chart => { if (chart) chart.destroy(); });
+                document.getElementById('resultsTable').innerHTML = '<p class="text-gray-500 text-sm">Simule para ver resultados</p>';
+                return;
+            }
+
+            const total = data.length;
+            const delivered = data.filter(r => r.entregue === 'Sim').length;
+            const opened = data.filter(r => r.aberto === 'Sim').length;
+            const converted = data.filter(r => r.convertido === 'Sim').length;
+
+            const deliveryRate = total > 0 ? ((delivered / total) * 100).toFixed(1) : 0;
+            const openRate = delivered > 0 ? ((opened / delivered) * 100).toFixed(1) : 0;
+            const conversionRate = opened > 0 ? ((converted / opened) * 100).toFixed(1) : 0;
+
+            document.getElementById('kpiTotal').textContent = total.toLocaleString('pt-BR');
+            document.getElementById('kpiDelivered').textContent = delivered.toLocaleString('pt-BR');
+            document.getElementById('kpiDeliveryRate').textContent = `${deliveryRate}% (sobre total)`;
+            document.getElementById('kpiOpened').textContent = opened.toLocaleString('pt-BR');
+            document.getElementById('kpiOpenRate').textContent = `${openRate}% (sobre entregues)`;
+            document.getElementById('kpiConverted').textContent = converted.toLocaleString('pt-BR');
+            document.getElementById('kpiConversionRate').textContent = `${conversionRate}% (sobre abertas)`;
+
+            updateCharts(data);
+            updateResultsTable(data);
+        }
+
+        function updateCharts(data) {
+            const ageGroups = ['18-25', '26-35', '36-50', '51-65', '65+'];
+            const ageData = {};
+            ageGroups.forEach(age => {
+                const filtered = data.filter(r => r.faixaEtaria === age);
+                ageData[age] = {
+                    delivered: filtered.filter(r => r.entregue === 'Sim').length,
+                    opened: filtered.filter(r => r.aberto === 'Sim').length,
+                    converted: filtered.filter(r => r.convertido === 'Sim').length
+                };
+            });
+
+            // Gráfico 1: Resultados por Faixa Etária
+            const ageCtx = document.getElementById('ageChart').getContext('2d');
+            if (state.charts.ageChart) state.charts.ageChart.destroy();
+            state.charts.ageChart = new Chart(ageCtx, {
+                type: 'bar',
+                data: {
+                    labels: ageGroups,
+                    datasets: [
+                        {
+                            label: 'Entregues',
+                            data: ageGroups.map(age => ageData[age].delivered),
+                            backgroundColor: '#10b981'
+                        },
+                        {
+                            label: 'Abertas',
+                            data: ageGroups.map(age => ageData[age].opened),
+                            backgroundColor: '#8b5cf6'
+                        },
+                        {
+                            label: 'Convertidas',
+                            data: ageGroups.map(age => ageData[age].converted),
+                            backgroundColor: '#f59e0b'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Gráfico 2: Taxa de Abertura por Faixa Etária
+            const openRateCtx = document.getElementById('openRateChart').getContext('2d');
+            if (state.charts.openRateChart) state.charts.openRateChart.destroy();
+            state.charts.openRateChart = new Chart(openRateCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ageGroups,
+                    datasets: [{
+                        data: ageGroups.map(age => {
+                            const filtered = data.filter(r => r.faixaEtaria === age && r.entregue === 'Sim');
+                            return filtered.length > 0 ? ((filtered.filter(r => r.aberto === 'Sim').length / filtered.length) * 100).toFixed(1) : 0;
+                        }),
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Gráfico 3: Top 10 UFs
+            const ufStats = {};
+            data.forEach(row => {
+                if (!ufStats[row.uf]) {
+                    ufStats[row.uf] = { delivered: 0, converted: 0 };
+                }
+                if (row.entregue === 'Sim') ufStats[row.uf].delivered++;
+                if (row.convertido === 'Sim') ufStats[row.uf].converted++;
+            });
+
+            const topUFs = Object.entries(ufStats)
+                .sort((a, b) => b[1].delivered - a[1].delivered)
+                .slice(0, 10);
+
+            const ufCtx = document.getElementById('ufChart').getContext('2d');
+            if (state.charts.ufChart) state.charts.ufChart.destroy();
+            state.charts.ufChart = new Chart(ufCtx, {
+                type: 'bar',
+                data: {
+                    labels: topUFs.map(([uf]) => uf),
+                    datasets: [
+                        {
+                            label: 'Entregues',
+                            data: topUFs.map(([, stats]) => stats.delivered),
+                            backgroundColor: '#10b981'
+                        },
+                        {
+                            label: 'Convertidas',
+                            data: topUFs.map(([, stats]) => stats.converted),
+                            backgroundColor: '#f59e0b'
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { x: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function updateResultsTable(data) {
+            const ufStats = {};
+            data.forEach(row => {
+                if (!ufStats[row.uf]) {
+                    ufStats[row.uf] = { delivered: 0, opened: 0, converted: 0, total: 0 };
+                }
+                ufStats[row.uf].total++;
+                if (row.entregue === 'Sim') ufStats[row.uf].delivered++;
+                if (row.aberto === 'Sim') ufStats[row.uf].opened++;
+                if (row.convertido === 'Sim') ufStats[row.uf].converted++;
+            });
+
+            const table = document.getElementById('resultsTable');
+            let html = '<table class="w-full text-sm border-collapse">';
+            html += '<thead><tr class="bg-gray-100 border-b"><th class="px-2 py-2 text-left font-semibold">UF</th><th class="px-2 py-2 text-left font-semibold">Total</th><th class="px-2 py-2 text-left font-semibold">Entregues</th><th class="px-2 py-2 text-left font-semibold">Abertas</th><th class="px-2 py-2 text-left font-semibold">Convertidas</th></tr></thead><tbody>';
+
+            Object.entries(ufStats).sort(([, a], [, b]) => b.delivered - a.delivered).forEach(([uf, stats]) => {
+                html += `<tr class="border-b hover:bg-gray-50">
+                    <td class="px-2 py-2 font-semibold">${uf}</td>
+                    <td class="px-2 py-2">${stats.total}</td>
+                    <td class="px-2 py-2">${stats.delivered}</td>
+                    <td class="px-2 py-2">${stats.opened}</td>
+                    <td class="px-2 py-2">${stats.converted}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            table.innerHTML = html;
+        }
+
+        // ============================================
+        // EXPORTAÇÃO
+        // ============================================
+        
+        document.getElementById('exportCSV').addEventListener('click', () => {
+            if (!state.simulationResults) {
+                alert('Execute uma simulação primeiro');
+                return;
+            }
+
+            const data = state.simulationResults;
+            const headers = ['Nome', 'E-mail', 'Telefone', 'UF', 'Faixa Etária', 'Tipo de Produto', 'Limite', 'Entregue', 'Aberto', 'Convertido'];
+            const rows = data.map(r => [r.nome, r.email, r.telefone, r.uf, r.faixaEtaria, r.tipoProduto, r.limite, r.entregue, r.aberto, r.convertido]);
+
+            let csv = headers.join(';') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => `"${cell}"`).join(';') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `relatorio_simulacao_${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+        });
+
+        document.getElementById('exportChart').addEventListener('click', () => {
+            if (!state.charts.ageChart) {
+                alert('Execute uma simulação primeiro');
+                return;
+            }
+
+            // Exporta o gráfico de barra (ageChart)
+            const canvas = document.getElementById('ageChart');
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `grafico_resultados_${new Date().toISOString().slice(0, 10)}.png`;
+            link.click();
+        });
+    </script>
+</body>
+</html>
